@@ -1,0 +1,48 @@
+﻿@page "/ide"
+@using MyProgrammingLanguage.Analyses
+@using MyProgrammingLanguage.Analyses.Lexer
+@rendermode InteractiveServer
+
+<PageTitle>IDE</PageTitle>
+
+<h1>IDE</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <h4>Code Editor</h4>
+        <textarea @bind="Code" class="form-control" rows="10" placeholder="Write your code here..."></textarea>
+        <button class="btn btn-primary mt-3" @onclick="AnalyzeCode">Analyze</button>
+    </div>
+
+    <div class="col-md-6">
+        <h4>Analysis Output</h4>
+        <div>
+            @if (Tokens is not null && Tokens.Any())
+            {
+            <ul>
+                @foreach (var token in Tokens)
+                {
+                <li>@token</li>
+                }
+            </ul>
+            }
+            else
+            {
+            <p>No output to display. Please enter some code and analyze.</p>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string Code { get; set; } = string.Empty;
+    private IEnumerable<Token> Tokens { get; set; } = new List<Token>();
+
+    private void AnalyzeCode()
+    {
+        if (!string.IsNullOrWhiteSpace(Code))
+        {
+            Tokens = new LexicalAnalyzer().Tokenize(Code);
+        }
+    }
+}
