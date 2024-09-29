@@ -6,4 +6,9 @@ public class AssignmentNode : CompilerNode
     {
         Children.Add(child);
     }
+
+    public override T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.Visit(this);
+    }
 }

@@ -6,4 +6,9 @@ public class PrintNode : CompilerNode
     {
         Children.Add(expression);
     }
+
+    public override T Accept<T>(IVisitor<T> visitor)
+    {
+        return visitor.Visit(this);
+    }
 }

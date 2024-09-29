@@ -8,4 +8,6 @@ public abstract class CompilerNode
     {
         Children.Add(child);
     }
+
+    public abstract T Accept<T>(IVisitor<T> visitor);
 }

@@ -7,7 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Compiling\" />
       <Folder Include="VirtualMachine\" />
     </ItemGroup>
 

@@ -73,10 +73,10 @@ public class Parser(List<Token> tokens, int index = 0)
             return ParseBinaryExpression();
         }
 
-        return ParseLiteralExpression();
+        return ParseExpressions();
     }
 
-    private CompilerNode ParseLiteralExpression()
+    private CompilerNode ParseExpressions()
     {
         var token = tokens[index++];
         switch (token.Type)
@@ -86,7 +86,7 @@ public class Parser(List<Token> tokens, int index = 0)
             case TokenType.Number:
                 return new LiteralExpressionNode(int.Parse(token.Value), VariableType.Number);
             case TokenType.Identifier:
-                return new LiteralExpressionNode(token.Value, VariableType.Identifier);
+                return new IdentifierExpressionNode(token.Value);
             default:
                 throw new UnexpectedTokenException(token);
         }
@@ -108,9 +108,9 @@ public class Parser(List<Token> tokens, int index = 0)
     
     private CompilerNode ParseBinaryExpression()
     {
-        var leftExpression = ParseLiteralExpression();
+        var leftExpression = ParseExpressions();
         var operatorType = GetOperatorType(tokens[index++]);
-        var rightExpression = ParseLiteralExpression();
+        var rightExpression = ParseExpressions();
         
         return new BinaryExpressionNode(leftExpression, rightExpression, operatorType);
     }

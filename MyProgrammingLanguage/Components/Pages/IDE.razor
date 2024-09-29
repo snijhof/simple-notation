@@ -1,11 +1,12 @@
 ﻿@page "/ide"
 @using System.Reflection
+@using System.Reflection.Emit
 @using System.Text.Json
 @using System.Text.Json.Serialization
-@using MyProgrammingLanguage.Analyses
 @using MyProgrammingLanguage.Analyses.Lexer
 @using MyProgrammingLanguage.Analyses.Parsing
 @using MyProgrammingLanguage.Analyses.Parsing.Nodes
+@using MyProgrammingLanguage.Compiling
 @rendermode InteractiveServer
 
 <style>
@@ -73,6 +74,8 @@
 
         <textarea @bind="Code" class="form-control" rows="10" placeholder="Write your code here..."></textarea>
         <button class="btn btn-primary mt-3" @onclick="AnalyzeCode">Analyze</button>
+        
+        <textarea @bind="CompilerOutput" class="form-control" rows="10"></textarea>
     </div>
 
     <div class="col-md-6">
@@ -109,7 +112,8 @@
     private string Code { get; set; } = string.Empty;
     private List<Token> Tokens { get; set; } = new();
     private AbstractSyntaxTree Ast { get; set; }
-
+    private string CompilerOutput { get; set; }
+    
     // Preset code snippets
     private Dictionary<string, string> codePresets = new()
     {
@@ -132,8 +136,23 @@
     {
         if (!string.IsNullOrWhiteSpace(Code))
         {
+            // Create a new DynamicMethod
+            var dynamicMethod = new DynamicMethod("RunProgram", typeof(void), Type.EmptyTypes, typeof(Program).Module);
+            var ilGenerator = dynamicMethod.GetILGenerator();
+            
             Tokens = new LexicalAnalyzer().Tokenize(Code);
             Ast = new Parser(Tokens).Parse();
+
+            new Compiler(ilGenerator).Compile(Ast);
+            
+            // Create and invoke the method
+            Action action = (Action)dynamicMethod.CreateDelegate(typeof(Action));
+            using (var sw = new StringWriter())
+            {
+                Console.SetOut(sw);
+                action.Invoke(); // This will print the result (e.g., "30")
+                CompilerOutput = sw.ToString();
+            }
         }
     }
 
