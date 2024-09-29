@@ -17,7 +17,7 @@ public class LexicalAnalyzer
         { @"^\(", TokenType.LeftParen },
         { @"^\)", TokenType.RightParen },
         { "^,", TokenType.Comma },
-        { "^;", TokenType.Semicolon },
+        { "^;", TokenType.EndOfLine },
         { @"^\{", TokenType.LeftBrace },
         { @"^\}", TokenType.RightBrace },
         { @"^\d+", TokenType.Number },
@@ -25,7 +25,7 @@ public class LexicalAnalyzer
         { "^[a-zA-Z_][a-zA-Z0-9_]*", TokenType.Identifier }
     };
 
-    public IEnumerable<Token> Tokenize(string input)
+    public List<Token> Tokenize(string input)
     {
         var tokens = new List<Token>();
         

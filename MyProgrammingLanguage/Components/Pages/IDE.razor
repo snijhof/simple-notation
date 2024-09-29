@@ -1,7 +1,58 @@
 ﻿@page "/ide"
+@using System.Reflection
+@using System.Text.Json
+@using System.Text.Json.Serialization
 @using MyProgrammingLanguage.Analyses
 @using MyProgrammingLanguage.Analyses.Lexer
+@using MyProgrammingLanguage.Analyses.Parsing
+@using MyProgrammingLanguage.Analyses.Parsing.Nodes
 @rendermode InteractiveServer
+
+<style>
+    .ast-tree {
+        display: block;
+        margin-left: 20px;
+        font-family: sans-serif;
+    }
+
+    .ast-node {
+        position: relative;
+        margin-left: 20px;
+        padding: 5px 0;
+    }
+
+    .ast-node::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -20px;
+        width: 20px;
+        height: 1px;
+        border-top: 2px solid #ccc;
+    }
+
+    .ast-children {
+        padding-left: 20px;
+        border-left: 2px solid #ccc;
+        margin-left: 5px;
+    }
+
+    .ast-node strong {
+        display: inline-block;
+        padding: 5px;
+        background-color: #f0f0f0;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+
+    pre {
+        background-color: #f9f9f9;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        white-space: pre-wrap; /* Makes JSON text wrap inside the box */
+    }
+</style>
 
 <PageTitle>IDE</PageTitle>
 
@@ -10,6 +61,16 @@
 <div class="row">
     <div class="col-md-6">
         <h4>Code Editor</h4>
+
+        <!-- Dropdown for Code Presets -->
+        <select @onchange="SetCodePreset" class="form-control mb-3">
+            <option value="">Select a preset</option>
+            <option value="preset1">Variable Declaration</option>
+            <option value="preset2">Assignment and Print Number</option>
+            <option value="preset3">Assignment and Print Hello, World!</option>
+            <option value="preset4">Calculate and Print result</option>
+        </select>
+
         <textarea @bind="Code" class="form-control" rows="10" placeholder="Write your code here..."></textarea>
         <button class="btn btn-primary mt-3" @onclick="AnalyzeCode">Analyze</button>
     </div>
@@ -19,6 +80,7 @@
         <div>
             @if (Tokens is not null && Tokens.Any())
             {
+            <h5>Tokens:</h5>
             <ul>
                 @foreach (var token in Tokens)
                 {
@@ -26,6 +88,15 @@
                 }
             </ul>
             }
+
+            @if (Ast != null)
+            {
+            <h5>Abstract Syntax Tree:</h5>
+            <div class="ast-tree">
+                @RenderAst(Ast.Root)
+            </div>
+            }
+
             else
             {
             <p>No output to display. Please enter some code and analyze.</p>
@@ -36,13 +107,88 @@
 
 @code {
     private string Code { get; set; } = string.Empty;
-    private IEnumerable<Token> Tokens { get; set; } = new List<Token>();
+    private List<Token> Tokens { get; set; } = new();
+    private AbstractSyntaxTree Ast { get; set; }
+
+    // Preset code snippets
+    private Dictionary<string, string> codePresets = new()
+    {
+        { "preset1", "var x = 10;" },
+        { "preset2", "var y = 20;\nprint(y);" },
+        { "preset3", "var text = \"Hello, World!\";\nprint(text);" },
+        { "preset4", "var x = 10;\nvar y = 20;\nprint(x + y);" }
+    };
+
+    private void SetCodePreset(ChangeEventArgs e)
+    {
+        var presetKey = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(presetKey) && codePresets.ContainsKey(presetKey))
+        {
+            Code = codePresets[presetKey];
+        }
+    }
 
     private void AnalyzeCode()
     {
         if (!string.IsNullOrWhiteSpace(Code))
         {
             Tokens = new LexicalAnalyzer().Tokenize(Code);
+            Ast = new Parser(Tokens).Parse();
         }
+    }
+
+    // Recursive method to render AST and display specific JSON content
+    private RenderFragment RenderAst(CompilerNode node) => builder =>
+    {
+        // Add node type and specific class properties as JSON
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "ast-node");
+
+        // Show the node type
+        builder.OpenElement(2, "strong");
+        builder.AddContent(3, node.GetType().Name);
+        builder.CloseElement(); // close <strong>
+
+        // Add the JSON content of the node excluding the 'Children' property
+        var nodeJson = SerializeSpecificNode(node);
+        if (nodeJson != "{}")
+        {
+            builder.OpenElement(4, "pre");
+            builder.AddContent(5, nodeJson); // Show JSON content in a <pre> tag
+            builder.CloseElement(); // close <pre>
+        }
+
+        // Render children nodes if there are any
+        if (node.Children.Any())
+        {
+            builder.OpenElement(6, "div");
+            builder.AddAttribute(7, "class", "ast-children");
+            foreach (var child in node.Children)
+            {
+                builder.AddContent(8, RenderAst(child));
+            }
+            builder.CloseElement(); // close <div class="ast-children">
+        }
+
+        builder.CloseElement(); // close <div class="ast-node">
+    };
+
+    // Serialize specific class properties excluding 'Children'
+    private string SerializeSpecificNode(CompilerNode node)
+    {
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true // Pretty print JSON
+        };
+        
+        options.Converters.Add(new JsonStringEnumConverter());
+
+        // Create a dictionary to hold property names and values, excluding 'Children'
+        var properties = node.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(prop => prop.Name != nameof(CompilerNode.Children)) // Exclude 'Children' property
+            .ToDictionary(prop => prop.Name, prop => prop.GetValue(node));
+
+        // Convert the dictionary to JSON
+        return JsonSerializer.Serialize(properties, options);
     }
 }

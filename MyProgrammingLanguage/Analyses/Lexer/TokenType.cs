@@ -15,7 +15,7 @@ public enum TokenType
     RightParen,
     Number,
     Comma,
-    Semicolon,
+    EndOfLine,
     LeftBrace,
     RightBrace,
     String
